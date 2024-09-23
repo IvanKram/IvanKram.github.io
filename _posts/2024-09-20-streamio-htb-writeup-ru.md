@@ -7,10 +7,12 @@ permalink: /posts/2024-09-20-streamio-htb-writeup
 
 ![streamio-thumb.webp]({{ site.baseurl }}/images/streamio-thumb.webp)
 
+## Intro
+
+Hi fellow hackers! In this HTB medium box, we are going to exploit SQL injection, PHP remote file inclusion and do a bunch of pivoting betweeen users with the help of bloodhound and some browser creds. I am going to be using sliver C2 to execute commands and manage beacons from different users.
+
+
 ## Enumeration 
-
-Лалалааллаал
-
 ```
 Nmap scan report for streamio (10.129.202.132)
 Host is up (0.064s latency).
