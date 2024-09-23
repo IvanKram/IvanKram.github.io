@@ -1,18 +1,18 @@
 ---
 layout: post
-title: HTB Streamio writeup
+title: Райтап HTB Streamio
 lang: ru
 permalink: /posts/2024-09-20-streamio-htb-writeup
 ---
 
 ![streamio-thumb.webp]({{ site.baseurl }}/images/streamio-thumb.webp)
 
-## Intro
+## Введение
 
 Привет, хакеры! В этой средней машине от HTB мы будем эксплуатировать SQL-инъекции, удаленное включение файлов PHP и горизонтально перемещаться между пользователями с помощью bloodhound и браузера firefox. Я буду использовать sliver C2 для выполнения команд и управления сессиями от разных пользователей.
 
 
-## Enumeration 
+## Разведка 
 ```
 Nmap scan report for streamio (10.129.202.132)
 Host is up (0.064s latency).
@@ -73,7 +73,7 @@ Host script results:
 
 ```
 
-#### перебор директорий streamio.htb
+#### Перебор директорий streamio.htb
 ![951d3490cad0ffaf135add5f807e6b7d.png]({{ site.baseurl }}/images/951d3490cad0ffaf135add5f807e6b7d.png)
 
 ![677032fa520f5c178bafd632cea2c55f.png]({{ site.baseurl }}/images/677032fa520f5c178bafd632cea2c55f.png)
@@ -81,7 +81,7 @@ Host script results:
 *master.php кажется интересным, но мы не можем ничего с ним сделать прямо сейчас, поэтому оставим его на потом.*
 ![a80bb040ecf94257ea30da5c897af455.png]({{ site.baseurl }}/images/a80bb040ecf94257ea30da5c897af455.png)
 
-#### перебор директорий watch.streamio.htb
+#### Перебор директорий watch.streamio.htb
 ![89cf16b81422939a96ad2098cf841cbe.png]({{ site.baseurl }}/images/89cf16b81422939a96ad2098cf841cbe.png)
 
 ***
