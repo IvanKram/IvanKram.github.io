@@ -2,6 +2,8 @@
 layout: post
 title: HTB Streamio writeup
 lang: en
+categories: [Offensive, HTB]
+tags: [windows, active-directory, sqli, rfi, php, laps]
 permalink: /posts/2024-09-20-streamio-htb-writeup
 ---
 

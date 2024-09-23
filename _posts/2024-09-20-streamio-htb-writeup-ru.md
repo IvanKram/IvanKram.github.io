@@ -2,8 +2,6 @@
 layout: post
 title: Райтап HTB Streamio
 lang: ru
-categories: [Offensive, HTB]
-tags: [windows, active-directory, sqli, rfi, php, laps]
 permalink: /posts/2024-09-20-streamio-htb-writeup
 ---
 
