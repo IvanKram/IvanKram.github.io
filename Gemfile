@@ -2,7 +2,7 @@
 
 source "https://rubygems.org"
 
-gemspec
+gem "jekyll-theme-chirpy", "~> 7.1", ">= 7.1.1"
 
 gem "html-proofer", "~> 5.0", group: :test
 
@@ -12,3 +12,5 @@ platforms :mingw, :x64_mingw, :mswin, :jruby do
 end
 
 gem "wdm", "~> 0.1.1", :platforms => [:mingw, :x64_mingw, :mswin]
+
+gem 'jekyll-polyglot', git: 'https://github.com/hionpu/polyglot', branch: 'master'

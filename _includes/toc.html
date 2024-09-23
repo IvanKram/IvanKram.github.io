@@ -1,13 +1,30 @@
 {% assign enable_toc = false %}
 {% if site.toc and page.toc %}
   {% if page.content contains '<h2' or page.content contains '<h3' %}
-    {% assign enable_toc = true %}
-  {% endif %}
-{% endif %}
+                                    {% assign enable_toc=true %}
+                                    {% endif %}
+                                    {% endif %}
+                                    {% if enable_toc %}
 
-{% if enable_toc %}
-  <section id="toc-wrapper" class="d-none ps-0 pe-4">
-    <h2 class="panel-heading ps-3 mb-2">{{- site.data.locales[include.lang].panel.toc -}}</h2>
-    <nav id="toc"></nav>
-  </section>
+                                 <section id="toc-wrapper" class="ps-0 pe-4">
+
+
+                                   <h2 class="panel-heading ps-3 pt-2 mb-2">{{- site.data.locales[include.lang].panel.toc -}}</h2>
+                                   <div id="toc"></div>
+                                   <!-- Language Selection -->
+                                   <ul class="nav-lang d-flex" style="margin-right: 3px; margin-bottom: 2px;">
+                                     {% for lang in site.languages %}
+                                     <li class="nav-item">
+                                       <a class="nav-link" style="{% if lang == site.active_lang %}font-weight: bold;{% endif %}text-align:center;" href="{% if lang == site.default_lang %}{{ site.baseurl }}{{ page.url }}{% else %}{{ site.baseurl }}/{{ lang }}{{ page.url }}{% endif %}">
+                                         <a style="{% if lang == site.active_lang %}font-weight: bold;{% endif %}text-align:center;" href="{% if lang == site.default_lang %} {{site.baseurl}}{{page.url}} {% else %} {{site.baseurl}}/{{ lang }}{{page.url}} {% endif %}">
+                                           <img src="{{ '/assets/img/flags/' | append: lang | append: '.png' }}" alt="{{ lang }}" style="height: 25px;">
+                                         </a>
+
+                                       </a>
+                                     </li>
+
+                                     {% endfor %}
+                                   </ul>
+
+                                 </section>
 {% endif %}

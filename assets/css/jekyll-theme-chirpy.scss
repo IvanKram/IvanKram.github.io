@@ -8,3 +8,20 @@
 ';
 
 /* append your custom style below */
+.nav-lang {
+  list-style: none; /* This removes the list dot */
+  display: flex;
+  align-items: center;
+  padding: 0;
+  margin: 0;
+}
+
+.nav-lang .nav-item {
+  margin-left: 5px;
+}
+
+.nav-lang .nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
