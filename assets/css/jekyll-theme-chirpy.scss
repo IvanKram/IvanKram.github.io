@@ -1,14 +1,11 @@
 ---
 ---
 
-@import 'main
-{%- if jekyll.environment == 'production' -%}
-  .bundle
-{%- endif -%}
-';
+@import 'main';
 
 /* append your custom style below */
 .nav-lang {
+  justify-content: center;
   list-style: none; /* This removes the list dot */
   display: flex;
   align-items: center;
