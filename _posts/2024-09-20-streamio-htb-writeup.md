@@ -135,7 +135,7 @@ We got a bunch of passwords and hashes so I'm gonna download the response and gr
 
 ![7f4ee8ad8cb51848ab315a4bad542c09.png]({{ site.baseurl }}/images/7f4ee8ad8cb51848ab315a4bad542c09.png)
 
-We can tell that it looks lake md5 hashes, but if in doubt, use *hashid* from kali.
+We can tell that it looks like md5 hashes, but if in doubt, use *hashid* from kali.
 
 Now we crack them using hashcat  `hashcat -m 0 -a 0 hashes.txt /usr/share/wordlists/rockyou.txt --username -o db_hashes_recovered.txt`
 

