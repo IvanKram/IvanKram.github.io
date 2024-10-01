@@ -3,7 +3,6 @@ layout: post
 title: HTB Sauna writeup
 lang: en
 categories: [Offensive, HTB]
-tags: [windows, active-directory, preauth ,kerberoasting, kerberos, DCSync, lsass]
 permalink: /posts/2024-09-24-sauna-htb-writeup
 ---
 
